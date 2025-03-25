@@ -1,93 +1,193 @@
-# Google Workspaces Audit
+# Google Workspaces FedRAMP Compliance Audit
 
+A tool to audit Google Workspace environments for FedRAMP compliance settings, helping organizations verify and maintain their compliance posture.
 
+## Overview
 
-## Getting started
+This project provides scripts to check Google Workspace environments against FedRAMP compliance requirements. It uses the Google Workspace Admin SDK APIs to automate compliance verification across multiple security controls.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Features
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- Comprehensive checks based on official FedRAMP compliance requirements
+- Verifies compliance across 12 critical security controls
+- Generates detailed compliance reports with remediation recommendations
+- Available in multiple languages (JavaScript, Python, and Go)
+- Multiple authentication methods (OAuth, Service Account, Secret Managers, and more)
 
-## Add your files
+## Available Implementations
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+- `fedramp-compliance-check.js` - JavaScript implementation
+- `fedramp_check.py` - Python implementation
+- `fedramp_check.go` - Go implementation
 
-```
-cd existing_repo
-git remote add origin https://gitlab.com/hackIDLE/fedramp/fedramp-testing-public/google-workspaces-audit.git
-git branch -M main
-git push -uf origin main
-```
+## Prerequisites
 
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.com/hackIDLE/fedramp/fedramp-testing-public/google-workspaces-audit/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- Google Workspace Enterprise or Business account with admin privileges
+- Google Cloud project with Admin SDK APIs enabled
+- OAuth 2.0 client credentials configured for API access
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+
+### JavaScript Version
+```bash
+npm install googleapis
+```
+
+### Python Version
+```bash
+pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+
+# Optional dependencies for additional auth methods
+pip install pyyaml  # For YAML config support
+pip install boto3  # For AWS Secrets Manager support
+pip install google-cloud-secret-manager  # For GCP Secret Manager support
+pip install hvac  # For HashiCorp Vault support
+```
+
+### Go Version
+```bash
+go mod init google-workspaces-audit
+go get -u golang.org/x/oauth2
+go get -u google.golang.org/api/admin/directory/v1
+go get -u google.golang.org/api/reports/v1
+```
+
+## Authentication Methods
+
+Both Python and Go implementations support multiple authentication methods:
+
+1. **OAuth 2.0** (Default)
+   - Requires `credentials.json` file from Google Cloud Console
+   - Stored token for repeated access
+
+2. **Service Account**
+   - With domain-wide delegation
+   - Can provide JSON file or content via environment variable
+   - Requires admin email for delegation
+
+3. **Environment Variables**
+   - Store credentials paths in environment variables
+   - More secure than hardcoding paths
+
+4. **Interactive Mode**
+   - Prompt for credentials at runtime
+   - No stored credentials on disk
+
+5. **Configuration Files**
+   - JSON or YAML (Python only) configuration
+   - Load settings from file
+
+6. **Google Cloud Secret Manager**
+   - Retrieve credentials from GCP Secret Manager
+   - Secure storage for sensitive information
+
+7. **AWS Secrets Manager**
+   - Retrieve credentials from AWS Secrets Manager
+   - Works with existing AWS infrastructure
+
+8. **HashiCorp Vault**
+   - Retrieve credentials from Vault
+   - Integration with enterprise secret management
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### JavaScript Version
+```bash
+node fedramp-compliance-check.js
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### Python Version
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+Basic usage:
+```bash
+python fedramp_check.py
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+With command line options:
+```bash
+python fedramp_check.py --credentials-path /path/to/credentials.json --report-path /path/to/report.json
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+# Using service account
+python fedramp_check.py --service-account /path/to/service-account.json --admin-email admin@domain.com
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+# Interactive mode
+python fedramp_check.py --interactive 
+
+# Using GCP Secret Manager
+python fedramp_check.py --auth-method gcp_secret --gcp-secret-credentials project-id/secret-name
+
+# Using config file
+python fedramp_check.py --config-file /path/to/config.yaml
+```
+
+### Go Version
+
+Basic usage:
+```bash
+go run fedramp_check.go
+```
+
+With command line options:
+```bash
+go run fedramp_check.go -credentials /path/to/credentials.json -report /path/to/report.json
+
+# Using service account
+go run fedramp_check.go -service-account /path/to/service-account.json -admin-email admin@domain.com
+
+# Interactive mode
+go run fedramp_check.go -interactive
+
+# Using config file
+go run fedramp_check.go -config /path/to/config.json
+```
+
+## Environment Variables
+
+Both implementations support these environment variables:
+
+- `GOOGLE_APPLICATION_CREDENTIALS`: Path to OAuth or Service Account credentials file
+- `GOOGLE_WORKSPACE_TOKEN_PATH`: Path to OAuth token file
+- `FEDRAMP_REPORT_PATH`: Path where report will be saved
+- `GOOGLE_SERVICE_ACCOUNT_JSON`: Service account JSON content
+- `GOOGLE_ADMIN_EMAIL`: Admin email for service account delegation
+- `FEDRAMP_AUTH_METHOD`: Authentication method to use
+- `GCP_PROJECT_ID`: GCP project ID for Secret Manager
+- `GCP_SECRET_CREDENTIALS`: Secret name for GCP Secret Manager
+- `AWS_SECRET_NAME`: Secret name for AWS Secrets Manager
+- `AWS_REGION`: AWS region for Secrets Manager
+- `VAULT_ADDR`: HashiCorp Vault address
+- `VAULT_TOKEN`: HashiCorp Vault token
+- `VAULT_SECRET_PATH`: Secret path for HashiCorp Vault
+
+## Compliance Checks
+
+The tool verifies compliance across these security controls:
+
+1. FedRAMP Authorized Services
+2. Data Region Policy
+3. Assured Controls
+4. Access Transparency
+5. Password Policy
+6. Two-Step Verification
+7. Admin Privileges
+8. Audit Logging
+9. Security Center
+10. Data Loss Prevention
+11. Context-Aware Access
+12. Endpoint Management
+
+## Report Output
+
+The tool generates a comprehensive compliance report with:
+- Overall compliance status
+- Detailed findings for each control
+- Compliance statistics summary
+- Specific recommendations for remediation
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
