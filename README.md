@@ -1,6 +1,24 @@
 # Google Workspaces FedRAMP Compliance Audit
 
+![alt text](image.png)
+
 A tool to audit Google Workspace environments for FedRAMP compliance settings, helping organizations verify and maintain their compliance posture.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Available Implementations](#available-implementations)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Authentication Methods](#authentication-methods)
+- [Obtaining a Google Workspace Access Token](#obtaining-a-google-workspace-access-token)
+- [Usage](#usage)
+- [Environment Variables](#environment-variables)
+- [Compliance Checks](#compliance-checks)
+- [Report Output](#report-output)
+- [License](#license)
+- [Contributing](#contributing)
 
 ## Overview
 
@@ -89,6 +107,40 @@ Both Python and Go implementations support multiple authentication methods:
    - Retrieve credentials from Vault
    - Integration with enterprise secret management
 
+### Obtaining a Google Workspace Access Token
+
+Google Workspace APIs use the same OAuth2 endpoints as other Google APIs but require Workspace-specific scopes. There are two common ways to obtain access tokens:
+
+1. 3-Legged OAuth (User Consent)
+   - Create an OAuth 2.0 Client ID in your GCP project (APIs & Services > Credentials > Create OAuth client ID).
+   - Configure the OAuth consent screen with your app details and the required Workspace scopes (e.g., `https://www.googleapis.com/auth/admin.directory.user.readonly`).
+   - Redirect users to Google's OAuth 2.0 authorization endpoint asking for these scopes.
+   - After approval, exchange the authorization code returned to your redirect URI for an access token and refresh token.
+   - Use the access token in `Authorization: Bearer <ACCESS_TOKEN>` headers for API calls.
+
+2. Service Account + Domain-Wide Delegation (Server-to-Server)
+   - In your GCP project, enable the Workspace APIs you need.
+   - Create a Service Account and download the JSON key file.
+   - Enable "Domain-wide Delegation" for the service account and note its client ID.
+   - In the Google Workspace Admin console, go to Security > API Controls > Domain-wide Delegation and authorize the client ID for the required scopes.
+   - In your code, load and impersonate an admin user to mint tokens. For example (Python):
+
+```python
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request
+
+SCOPES = ['https://www.googleapis.com/auth/admin.directory.user.readonly']
+creds = service_account.Credentials.from_service_account_file(
+    'service-account.json',
+    scopes=SCOPES,
+    subject='admin@your-domain.com'
+)
+creds.refresh(Request())
+token = creds.token
+```
+
+Use that token in the `Authorization` header for Workspace API requests.
+
 ## Usage
 
 ### JavaScript Version
@@ -161,20 +213,20 @@ Both implementations support these environment variables:
 
 ## Compliance Checks
 
-The tool verifies compliance across these security controls:
+The tool performs the following checks to ensure your Google Workspace environment meets FedRAMP requirements:
 
-1. FedRAMP Authorized Services
-2. Data Region Policy
-3. Assured Controls
-4. Access Transparency
-5. Password Policy
-6. Two-Step Verification
-7. Admin Privileges
-8. Audit Logging
-9. Security Center
-10. Data Loss Prevention
-11. Context-Aware Access
-12. Endpoint Management
+- **FedRAMP Authorized Services**: Confirms only FedRAMP-authorized Workspace services (Gmail, Drive, Meet, etc.) are enabled.
+- **Data Region Policy**: Verifies Data Regions are restricted to the United States.
+- **Assured Controls**: Checks if the Assured Controls add-on is enabled (Enterprise Plus only).
+- **Access Transparency**: Verifies Access Transparency is enabled to monitor Google staff access events.
+- **Password Policy**: Ensures password settings meet FedRAMP standards (minimum length, complexity, expiration).
+- **Two-Step Verification**: Enforces 2-Step Verification across all user accounts.
+- **Admin Privileges**: Reviews admin role assignments for least-privilege compliance.
+- **Audit Logging**: Checks that audit logs for Admin, Drive, and login activities are enabled.
+- **Security Center**: Ensures Security Center is configured and active (Enterprise Plus only).
+- **Data Loss Prevention**: Verifies DLP rules are in place in Gmail and Drive.
+- **Context-Aware Access**: Confirms context-aware access policies are applied.
+- **Endpoint Management**: Ensures endpoint management policies are configured for devices.
 
 ## Report Output
 
@@ -186,7 +238,7 @@ The tool generates a comprehensive compliance report with:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is distributed under the terms of the GNU General Public License v3.0 (GPL-3.0). See the COPYING file for the full license text.
 
 ## Contributing
 
