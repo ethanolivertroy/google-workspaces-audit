@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gws-inspector"
+version = "0.0.1"
+description = "Multi-framework compliance audit tool for Google Workspace environments"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.12"
+authors = [{ name = "Ethan Troy" }]
+keywords = ["google-workspace", "compliance", "fedramp", "stig", "audit", "cmmc", "cis", "soc2"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed",
+]
+dependencies = [
+    "google-api-python-client>=2.100,<3",
+    "google-auth>=2.23,<3",
+    "google-auth-oauthlib>=1.1,<2",
+    "google-auth-httplib2>=0.2,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+gws-inspector = "gws_inspector.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ethanolivertroy/gws-inspector"
+Repository = "https://github.com/ethanolivertroy/gws-inspector"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gws_inspector"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]

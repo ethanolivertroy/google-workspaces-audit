@@ -1,0 +1,285 @@
+"""IRAP (Australian ISM) compliance report generator."""
+
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
+
+from gws_inspector.models import ComplianceFinding, GWSData
+from gws_inspector.output import OutputManager
+from gws_inspector.reporters import register_reporter
+from gws_inspector.reporters.base import ReportGenerator
+
+_ISM_SECTIONS: dict[str, str] = {
+    "ISM-0974": "Multi-factor Authentication",
+    "ISM-1173": "Authentication Hardening",
+    "ISM-1401": "Centralised Authentication",
+    "ISM-0421": "Password Policy",
+    "ISM-1055": "Session Management",
+    "ISM-0120": "Audit Logging",
+    "ISM-0580": "Event Monitoring",
+    "ISM-1228": "Admin Privilege Restriction",
+    "ISM-1507": "Privileged Access Management",
+    "ISM-1234": "Account Management",
+}
+
+_E8_STRATEGIES = [
+    "Application Control",
+    "Patch Applications",
+    "Configure Microsoft Office Macro Settings",
+    "User Application Hardening",
+    "Restrict Administrative Privileges",
+    "Patch Operating Systems",
+    "Multi-factor Authentication",
+    "Regular Backups",
+]
+
+_E8_MATURITY_DESCRIPTIONS = {
+    0: "Not implemented",
+    1: "Partly aligned with intent",
+    2: "Mostly aligned with intent",
+    3: "Fully aligned with intent",
+}
+
+
+def _ism_section(control_id: str) -> str:
+    """Extract section grouping from ISM control ID."""
+    return control_id.split("-")[0] if "-" in control_id else "ISM"
+
+
+@register_reporter
+class IRAPReportGenerator(ReportGenerator):
+    """Generate IRAP compliance report and Essential Eight assessment."""
+
+    name = "irap_report"
+    display_name = "IRAP Compliance Report"
+
+    def generate(
+        self,
+        findings: list[ComplianceFinding],
+        data: GWSData,
+        output: OutputManager,
+    ) -> None:
+        ts = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        irap_findings = [f for f in findings if f.framework == "IRAP"]
+
+        self._generate_irap_report(irap_findings, data, output, ts)
+        self._generate_e8_assessment(irap_findings, data, output, ts)
+
+    def _generate_irap_report(
+        self,
+        irap_findings: list[ComplianceFinding],
+        data: GWSData,
+        output: OutputManager,
+        ts: str,
+    ) -> None:
+        status_counts = Counter(f.status for f in irap_findings)
+        total = len(irap_findings)
+        passed = status_counts.get("pass", 0)
+        failed = status_counts.get("fail", 0)
+        manual = status_counts.get("manual", 0)
+
+        # Group by ISM section
+        by_section: dict[str, list[ComplianceFinding]] = defaultdict(list)
+        for f in irap_findings:
+            by_section[_ism_section(f.control_id)].append(f)
+
+        lines: list[str] = []
+        _a = lines.append
+
+        _a("# IRAP Compliance Report")
+        _a("")
+        _a(f"**Generated:** {ts}")
+        _a(f"**Domain:** {data.domain}")
+        _a("**Framework:** Australian Government Information Security Manual (ISM)")
+        _a("**Classification:** PROTECTED")
+        _a("")
+        _a("## Summary")
+        _a("")
+        _a("| Metric | Value |")
+        _a("|--------|-------|")
+        _a(f"| Total ISM Controls Assessed | {total} |")
+        _a(f"| Compliant | {passed} |")
+        _a(f"| Non-compliant | {failed} |")
+        _a(f"| Manual Assessment Required | {manual} |")
+        if total > 0:
+            _a(f"| Compliance Rate | {passed * 100 // total}% |")
+        _a("")
+
+        _a("## ISM Control Assessment")
+        _a("")
+
+        for section in sorted(by_section.keys()):
+            section_findings = by_section[section]
+            section_passed = sum(1 for f in section_findings if f.status == "pass")
+
+            _a(f"### {section}")
+            _a("")
+            _a(f"**Results:** {section_passed}/{len(section_findings)} controls compliant")
+            _a("")
+            _a("| Control | Title | Status | Severity | Details |")
+            _a("|---------|-------|--------|----------|---------|")
+
+            for f in sorted(section_findings, key=lambda x: x.control_id):
+                status_label = {
+                    "pass": "Compliant",
+                    "fail": "Non-compliant",
+                    "manual": "Manual",
+                }.get(f.status, f.status.title())
+                _a(f"| {f.control_id} | {f.title} | {status_label} | {f.severity.title()} | {f.comments} |")
+            _a("")
+
+        # Non-compliant items summary
+        failed_findings = [f for f in irap_findings if f.status == "fail"]
+        if failed_findings:
+            _a("## Non-compliant Controls")
+            _a("")
+            _a("The following ISM controls are non-compliant and require remediation")
+            _a("prior to IRAP assessment:")
+            _a("")
+            for f in failed_findings:
+                _a(f"- **{f.control_id}** - {f.title}: {f.comments}")
+            _a("")
+
+        _a("---")
+        _a(f"*Report generated by gws-inspector on {ts}*")
+
+        output.save_markdown(
+            "\n".join(lines),
+            "compliance",
+            "irap",
+            "irap_compliance_report.md",
+        )
+
+    def _generate_e8_assessment(
+        self,
+        irap_findings: list[ComplianceFinding],
+        data: GWSData,
+        output: OutputManager,
+        ts: str,
+    ) -> None:
+        lines: list[str] = []
+        _a = lines.append
+
+        _a("# Essential Eight Maturity Assessment")
+        _a("")
+        _a(f"**Generated:** {ts}")
+        _a(f"**Domain:** {data.domain}")
+        _a("**Framework:** ACSC Essential Eight Maturity Model")
+        _a("")
+        _a("## Overview")
+        _a("")
+        _a("The Essential Eight is a set of baseline mitigation strategies from the")
+        _a("Australian Cyber Security Centre (ACSC). This assessment evaluates")
+        _a("the Google Workspace environment against applicable strategies.")
+        _a("")
+        _a("> **Note:** Not all Essential Eight strategies apply directly to SaaS/cloud")
+        _a("> identity management. Strategies like Application Control and Patch")
+        _a("> Management are assessed at the endpoint level.")
+        _a("")
+
+        _a("## Maturity Assessment")
+        _a("")
+        _a("| # | Strategy | Maturity Level | Notes |")
+        _a("|---|----------|---------------|-------|")
+
+        # Determine maturity per strategy based on findings
+        for i, strategy in enumerate(_E8_STRATEGIES, 1):
+            maturity, notes = self._assess_e8_strategy(strategy, irap_findings, data)
+            level_desc = _E8_MATURITY_DESCRIPTIONS.get(maturity, "Unknown")
+            _a(f"| {i} | {strategy} | Level {maturity} - {level_desc} | {notes} |")
+
+        _a("")
+        _a("## Maturity Level Definitions")
+        _a("")
+        _a("| Level | Description |")
+        _a("|-------|-------------|")
+        for level, desc in _E8_MATURITY_DESCRIPTIONS.items():
+            _a(f"| Level {level} | {desc} |")
+        _a("")
+
+        _a("## Recommendations")
+        _a("")
+        _a("1. **Multi-factor Authentication:** Ensure MFA is enforced for all users,")
+        _a("   especially privileged accounts. Use phishing-resistant methods (security keys).")
+        _a("2. **Restrict Administrative Privileges:** Minimise the number of super admins.")
+        _a("   Implement time-based or just-in-time privileged access.")
+        _a("3. **Regular Backups:** Verify Google Vault retention policies and")
+        _a("   third-party backup solutions for critical data.")
+        _a("4. **User Application Hardening:** Review OAuth app access,")
+        _a("   disable less secure app access, restrict API scopes.")
+        _a("")
+
+        _a("---")
+        _a(f"*Assessment generated by gws-inspector on {ts}*")
+
+        output.save_markdown(
+            "\n".join(lines),
+            "compliance",
+            "irap",
+            "essential_eight_assessment.md",
+        )
+
+    @staticmethod
+    def _assess_e8_strategy(
+        strategy: str,
+        findings: list[ComplianceFinding],
+        data: GWSData,
+    ) -> tuple[int, str]:
+        """Estimate E8 maturity level for a strategy. Returns (level, notes)."""
+        strategy_lower = strategy.lower()
+
+        if "multi-factor" in strategy_lower:
+            mfa_findings = [
+                f for f in findings
+                if any(kw in f.title.lower() for kw in ("mfa", "2sv", "two-step", "multi-factor"))
+            ]
+            if not mfa_findings:
+                return 0, "No MFA controls assessed"
+            if all(f.status == "pass" for f in mfa_findings):
+                return 3, "MFA enforced across organisation"
+            if any(f.status == "pass" for f in mfa_findings):
+                return 2, "MFA partially enforced"
+            return 1, "MFA configured but not fully enforced"
+
+        if "restrict admin" in strategy_lower:
+            admin_findings = [
+                f for f in findings
+                if any(kw in f.title.lower() for kw in ("admin", "privilege", "role"))
+            ]
+            if not admin_findings:
+                return 0, "No admin controls assessed"
+            if all(f.status == "pass" for f in admin_findings):
+                return 3, "Admin privileges appropriately restricted"
+            if any(f.status == "pass" for f in admin_findings):
+                return 2, "Some admin controls in place"
+            return 1, "Admin controls need improvement"
+
+        if "regular backup" in strategy_lower:
+            return 1, "Assess Google Vault and third-party backup configuration manually"
+
+        if "application control" in strategy_lower:
+            return 1, "Assess at endpoint level; review OAuth app policies in GWS"
+
+        if "patch application" in strategy_lower:
+            return 1, "Not directly applicable to GWS SaaS; assess managed endpoints"
+
+        if "macro" in strategy_lower:
+            return 1, "Not directly applicable to Google Workspace"
+
+        if "user application hardening" in strategy_lower:
+            oauth_findings = [
+                f for f in findings
+                if any(kw in f.title.lower() for kw in ("oauth", "app", "api", "less secure"))
+            ]
+            if not oauth_findings:
+                return 1, "Review API access and OAuth app policies"
+            if all(f.status == "pass" for f in oauth_findings):
+                return 3, "Application access controls configured"
+            return 2, "Partial application hardening in place"
+
+        if "patch operating" in strategy_lower:
+            return 1, "Not directly applicable to GWS SaaS; assess managed endpoints"
+
+        return 0, "Assessment required"

@@ -87,3 +87,22 @@ token.json
 ## Reports
 reports/
 *.report.json
+
+## uv
+.python-version
+
+## Testing
+.pytest_cache/
+htmlcov/
+
+## Audit output
+gws_audit_results_*/
+gws_audit_*.zip
+
+## Claude
+CLAUDE.md
+
+## Credentials (additional)
+client_secret*.json
+service-account*.json
+*.p12
